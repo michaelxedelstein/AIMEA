@@ -1,0 +1,5 @@
+python-dotenv>=0.21.0
+deepgram-sdk>=5.0.0
+openai>=0.27.0
+pyaudio>=0.2.11
+websockets>=10.0
