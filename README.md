@@ -14,7 +14,13 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4
 AZURE_OPENAI_API_VERSION=2024-02-15-preview
 ```
 
-2. Install dependencies:
+2. Install dependencies (into your Python environment):
+
+   On macOS you may first need to install PortAudio so that PyAudio can compile:
+
+   ```bash
+   brew install portaudio
+   ```
 
 ```bash
 pip install -r requirements.txt
