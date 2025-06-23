@@ -31,3 +31,20 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+## Testing Summarization
+
+You can verify your Azure OpenAI deployment directly with curl before waiting for the periodic summary:
+
+```bash
+curl -X POST \
+  "${AZURE_OPENAI_ENDPOINT%/}/openai/deployments/${AZURE_OPENAI_DEPLOYMENT_NAME}/chat/completions?api-version=${AZURE_OPENAI_API_VERSION}" \
+  -H "Content-Type: application/json" \
+  -H "api-key: $AZURE_OPENAI_API_KEY" \
+  -d '{
+    "messages":[{"role":"user","content":"Test summary"}],
+    "temperature":1
+  }'
+```
+
+If you receive a 404, double check that your `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME`, and `AZURE_OPENAI_API_VERSION` exactly match your Azure resource settings.

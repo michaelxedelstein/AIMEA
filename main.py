@@ -14,7 +14,9 @@ def main() -> None:
     transcriber = Transcriber(buffer)
     summarizer = Summarizer(buffer, interval=60.0)
 
-    loop = asyncio.get_event_loop()
+    # Create a fresh event loop (avoids DeprecationWarning on get_event_loop)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         loop.create_task(transcriber.stream_audio())
         loop.create_task(summarizer.run())
