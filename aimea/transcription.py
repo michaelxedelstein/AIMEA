@@ -60,9 +60,11 @@ class Transcriber:
         socket.on(LiveTranscriptionEvents.Metadata, _on_metadata)
 
         async def _on_transcript(_, result, **kwargs):
+            # Only buffer and print finalized transcripts to avoid repetition
+            if not getattr(result, "is_final", False):
+                return
             transcript = result.channel.alternatives[0].transcript.strip()
             if transcript:
-                # Add to rolling buffer and print for live debugging
                 self.buffer.add(transcript)
                 print(f"Transcript: {transcript}")
 
