@@ -64,6 +64,18 @@ If you receive a 404, double check that your `AZURE_OPENAI_ENDPOINT`, `AZURE_OPE
 
 ## Developer Build (Phase 1)
 
+For development/testing only (dev mode), you can skip packaging and run directly:
+```bash
+# Start the Python backend in one terminal (from project root):
+source .venv/bin/activate      # activate your venv
+python server.py               # starts server on port 8000
+```
+```bash
+# In another terminal, launch the Electron UI (must be run inside electron folder):
+cd electron
+npm install                    # first time only
+npm start                      # runs the UI against your dev server
+```
 To produce the self-contained desktop app (includes server + UI):
 
 1. Create a Python virtual environment and install dependencies:

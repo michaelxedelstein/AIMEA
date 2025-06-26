@@ -9,6 +9,8 @@ from aiohttp import web
 from aimea.buffer import RollingBuffer
 from aimea.transcription import Transcriber
 from aimea.summarizer import Summarizer
+from aimea.config import AZURE_OPENAI_DEPLOYMENT_NAME
+print(f"[Config] Azure deployment name: '{AZURE_OPENAI_DEPLOYMENT_NAME}'")
 import pyaudio
 
 # Shared buffer and services
@@ -83,11 +85,14 @@ async def handle_classify(request: web.Request) -> web.Response:
     if not text:
         return web.json_response({'error': 'No text provided'}, status=400)
     try:
-        # Prompt for classification
+        # Prompt for language, intent, and topic classification
         prompt = (
-            "You are an AI assistant that extracts intent and topics from meeting transcripts. "
-            "Identify the user's intent (e.g., schedule_meeting, send_message, action_item, other) and list relevant topics. "
-            "Return a JSON object with keys 'intent' and 'topics' (array of strings). Text:\n" + text
+            "You are an AI assistant that extracts the language (en or es), intent, and topics from a meeting transcript text. "
+            "Return a JSON object with the following keys:\n"
+            "- language: one of \"en\" or \"es\"\n"
+            "- intent: one of \"schedule_meeting\", \"send_message\", \"action_item\", or \"other\"\n"
+            "- topics: an array of short topic strings (e.g., \"budget\", \"roadmap\").\n"
+            f"Text: {text}"
         )
         response = await summarizer.client.chat.completions.create(
             model=AZURE_OPENAI_DEPLOYMENT_NAME,
@@ -109,7 +114,8 @@ def create_app() -> web.Application:
     app.router.add_get('/summary', handle_summary)
     app.router.add_get('/devices', handle_devices)
     app.router.add_post('/device', handle_select_device)
-    app.on_startup.append(start_transcription)
+    # Start transcription only after user selects an input device via /device endpoint
+    # app.on_startup.append(start_transcription)
     app.on_cleanup.append(stop_transcription)
     app.router.add_post('/classify', handle_classify)
     return app

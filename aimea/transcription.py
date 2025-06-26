@@ -8,7 +8,13 @@ import pyaudio
 from deepgram import DeepgramClient, LiveTranscriptionEvents
 
 from aimea.buffer import RollingBuffer
-from aimea.config import DEEPGRAM_API_KEY, AIMEA_INPUT_DEVICE_NAME, DEEPGRAM_MODEL, DEEPGRAM_TIER
+from aimea.config import (
+    DEEPGRAM_API_KEY,
+    AIMEA_INPUT_DEVICE_NAME,
+    DEEPGRAM_MODEL,
+    DEEPGRAM_TIER,
+    DEEPGRAM_LANGUAGES,
+)
 
 
 class Transcriber:
@@ -43,6 +49,7 @@ class Transcriber:
                 print(f"Warning: input device '{self.input_device_name}' not found. Using default device.")
         # Attempt to open audio stream with desired channel count, fallback to mono if unavailable
         try:
+            # Ensure we have a valid input device index
             open_args = dict(
                 format=pyaudio.paInt16,
                 channels=self.channels,
@@ -52,18 +59,26 @@ class Transcriber:
             )
             if device_index is not None:
                 open_args['input_device_index'] = device_index
+            else:
+                # Try default input device
+                try:
+                    default_info = audio_interface.get_default_input_device_info()
+                    open_args['input_device_index'] = int(default_info['index'])
+                except Exception:
+                    # Fallback: first available input device
+                    for i in range(audio_interface.get_device_count()):
+                        info = audio_interface.get_device_info_by_index(i)
+                        if info.get('maxInputChannels', 0) > 0:
+                            open_args['input_device_index'] = i
+                            break
             stream = audio_interface.open(**open_args)
         except OSError as e:
             if self.channels != 1:
-                print(f"Warning: unable to open input with {self.channels} channels ({e}), falling back to mono.")
+                print(f"Warning: unable to open with {self.channels} channels ({e}), trying mono.")
                 self.channels = 1
-                stream = audio_interface.open(
-                    format=pyaudio.paInt16,
-                    channels=self.channels,
-                    rate=self.sample_rate,
-                    input=True,
-                    frames_per_buffer=self.block_size,
-                )
+                open_args['channels'] = 1
+                # retry open with same input_device_index
+                stream = audio_interface.open(**open_args)
             else:
                 raise
         # Initialize Deepgram WebSocket client
@@ -108,17 +123,18 @@ class Transcriber:
 
         # Start the WebSocket connection with proper audio parameters
         # Start the WebSocket connection with proper audio parameters
+        # Configure Deepgram streaming options
+        # Streaming options: minimal required keys for websocket
         options = {
             "encoding": "linear16",
             "sample_rate": self.sample_rate,
             "channels": self.channels,
             "punctuate": True,
             "interim_results": True,
-            "language": "en-US",
+            # (Optional) language; omit to let Deepgram auto-detect language
+            # "language": DEEPGRAM_LANGUAGES,
             # Enable Deepgram speaker diarization
             "diarize": True,
-            # Improve accuracy with smart formatting
-            "smart_format": True,
         }
         # Optionally use a specific model and tier for higher accuracy
         if DEEPGRAM_MODEL:

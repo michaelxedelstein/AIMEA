@@ -52,7 +52,9 @@ async function classifyLine(line) {
     div.style.fontSize = '0.8rem';
     div.style.color = '#666';
     if (data.intent) {
-      div.textContent = `Intent: ${data.intent}, Topics: ${ (data.topics||[]).join(', ')}`;
+      const lang = data.language ? `Lang: ${data.language}, ` : '';
+      const topics = data.topics ? data.topics.join(', ') : '';
+      div.textContent = `${lang}Intent: ${data.intent}` + (topics ? `, Topics: ${topics}` : '');
     } else if (data.error) {
       div.textContent = `Classification error: ${data.error}`;
     }
