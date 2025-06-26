@@ -25,6 +25,7 @@ buffer = RollingBuffer(window_seconds=120.0)
 transcriber = Transcriber(buffer)
 # Disable periodic summarization by setting a large interval
 summarizer = Summarizer(buffer, interval=3600.0)
+transcription_task = None
 
 async def start_transcription(app: web.Application) -> None:
     """Start the transcription stream in the background on server startup."""
@@ -32,11 +33,12 @@ async def start_transcription(app: web.Application) -> None:
 
 async def stop_transcription(app: web.Application) -> None:
     """Cancel the transcription task on server shutdown."""
-    task = app.get('transcription_task')
-    if task:
-        task.cancel()
+    global transcription_task
+    if transcription_task:
+        transcription_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await task
+            await transcription_task
+        transcription_task = None
 
 async def handle_buffer(request: web.Request) -> web.Response:
     """Return the current contents of the rolling buffer."""
@@ -77,12 +79,12 @@ async def handle_select_device(request: web.Request) -> web.Response:
     device = data.get('device')
     transcriber.set_input_device(device)
     # Restart transcription task
-    task = request.app.get('transcription_task')
-    if task:
-        task.cancel()
+    global transcription_task
+    if transcription_task:
+        transcription_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await task
-    request.app['transcription_task'] = asyncio.create_task(transcriber.stream_audio())
+            await transcription_task
+    transcription_task = asyncio.create_task(transcriber.stream_audio())
     return web.json_response({'status': 'ok', 'device': device})
     
 async def handle_languages(request: web.Request) -> web.Response:
@@ -100,12 +102,12 @@ async def handle_select_language(request: web.Request) -> web.Response:
     lang = data.get('language')
     transcriber.set_language(lang)
     # Restart transcription task
-    task = request.app.get('transcription_task')
-    if task:
-        task.cancel()
+    global transcription_task
+    if transcription_task:
+        transcription_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await task
-    request.app['transcription_task'] = asyncio.create_task(transcriber.stream_audio())
+            await transcription_task
+    transcription_task = asyncio.create_task(transcriber.stream_audio())
     return web.json_response({'status': 'ok', 'language': lang})
     
 async def handle_classify(request: web.Request) -> web.Response:
