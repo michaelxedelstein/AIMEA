@@ -83,6 +83,13 @@ To produce the self-contained desktop app (includes server + UI):
    python3 -m PyInstaller --onefile --distpath electron/dist/server server.py
    ```
 
+4. Prepare audio driver installers:
+   - Create a folder `electron/resources/` and download the macOS or Windows installer:
+     * macOS: BlackHole 2ch `.pkg` from https://github.com/ExistentialAudio/BlackHole/releases
+       → Place it as `electron/resources/BlackHole2ch.pkg`
+     * Windows: VB-Cable `.exe` from https://vb-audio.com/Cable/index.htm
+       → Place it as `electron/resources/VB-Cable_Setup.exe`
+
 4. Build the Electron app:
    ```bash
    cd electron

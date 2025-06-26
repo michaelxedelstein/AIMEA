@@ -31,8 +31,10 @@ async def stop_transcription(app: web.Application) -> None:
 
 async def handle_buffer(request: web.Request) -> web.Response:
     """Return the current contents of the rolling buffer."""
-    contents = buffer.get_contents()
-    return web.json_response({'buffer': contents})
+    # Return list of buffered transcript entries (with speaker tags)
+    # Access internal deque: list of (timestamp, text)
+    entries = [text for (_, text) in buffer._buffer]
+    return web.json_response({'buffer': entries})
 
 async def handle_summary(request: web.Request) -> web.Response:
     """Generate and return a summary of the current buffer contents."""
@@ -73,6 +75,33 @@ async def handle_select_device(request: web.Request) -> web.Response:
             await task
     request.app['transcription_task'] = asyncio.create_task(transcriber.stream_audio())
     return web.json_response({'status': 'ok', 'device': device})
+    
+async def handle_classify(request: web.Request) -> web.Response:
+    """Classify a transcript line into intent and topics using Azure OpenAI."""
+    data = await request.json()
+    text = data.get('text', '')
+    if not text:
+        return web.json_response({'error': 'No text provided'}, status=400)
+    try:
+        # Prompt for classification
+        prompt = (
+            "You are an AI assistant that extracts intent and topics from meeting transcripts. "
+            "Identify the user's intent (e.g., schedule_meeting, send_message, action_item, other) and list relevant topics. "
+            "Return a JSON object with keys 'intent' and 'topics' (array of strings). Text:\n" + text
+        )
+        response = await summarizer.client.chat.completions.create(
+            model=AZURE_OPENAI_DEPLOYMENT_NAME,
+            messages=[{'role': 'user', 'content': prompt}],
+        )
+        content = response.choices[0].message.content.strip()
+        import json
+        try:
+            result = json.loads(content)
+        except Exception:
+            result = {'error': 'Failed to parse classification', 'raw': content}
+        return web.json_response(result)
+    except Exception as e:
+        return web.json_response({'error': str(e)}, status=500)
 
 def create_app() -> web.Application:
     app = web.Application()
@@ -82,6 +111,7 @@ def create_app() -> web.Application:
     app.router.add_post('/device', handle_select_device)
     app.on_startup.append(start_transcription)
     app.on_cleanup.append(stop_transcription)
+    app.router.add_post('/classify', handle_classify)
     return app
 
 if __name__ == '__main__':

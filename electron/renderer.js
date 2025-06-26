@@ -36,6 +36,32 @@ async function applyDevice() {
   }
 }
 
+/**
+ * Classify a line for intent/topics and append to the UI
+ */
+async function classifyLine(line) {
+  try {
+    const res = await fetch('http://localhost:8000/classify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: line}),
+    });
+    const data = await res.json();
+    // Append classification below the line
+    const div = document.createElement('div');
+    div.style.fontSize = '0.8rem';
+    div.style.color = '#666';
+    if (data.intent) {
+      div.textContent = `Intent: ${data.intent}, Topics: ${ (data.topics||[]).join(', ')}`;
+    } else if (data.error) {
+      div.textContent = `Classification error: ${data.error}`;
+    }
+    transcriptDiv.appendChild(div);
+  } catch (err) {
+    console.error('Error classifying line:', err);
+  }
+}
+
 // Populate device list; poll until server is ready
 fetchDevices();
 const devicePoll = setInterval(async () => {
@@ -47,11 +73,24 @@ const devicePoll = setInterval(async () => {
 applyBtn.addEventListener('click', applyDevice);
 
 // Live buffer polling
+// Track lines already classified
+const seen = new Set();
 async function fetchBuffer() {
   try {
     const res = await fetch('http://localhost:8000/buffer');
     const data = await res.json();
-    transcriptDiv.textContent = data.buffer || '';
+    transcriptDiv.innerHTML = '';
+    data.buffer.forEach(line => {
+      // Render line
+      const div = document.createElement('div');
+      div.textContent = line;
+      transcriptDiv.appendChild(div);
+      // Classify new lines
+      if (!seen.has(line)) {
+        seen.add(line);
+        classifyLine(line);
+      }
+    });
     transcriptDiv.scrollTop = transcriptDiv.scrollHeight;
   } catch (err) {
     console.error('Error fetching buffer:', err);

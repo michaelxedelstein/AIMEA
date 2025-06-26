@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
@@ -73,6 +73,36 @@ app.whenReady().then(async () => {
     console.log('Detected existing server on port 8000; skipping spawn.');
   }
   createWindow();
+  // Ensure virtual audio driver is installed
+  // Determine installer path: packaged vs dev
+  const pkgName = process.platform === 'darwin' ? 'BlackHole2ch.pkg' : 'VB-Cable_Setup.exe';
+  let pkgPath;
+  if (app.isPackaged) {
+    pkgPath = path.join(process.resourcesPath, 'resources', pkgName);
+  } else {
+    pkgPath = path.join(__dirname, 'resources', pkgName);
+  }
+  // Simple detection: attempt to list audio devices via pyaudio in backend
+  // If the driver is absent, prompt user to install
+  // For simplicity, always prompt on first run
+  dialog.showMessageBox({
+    type: 'info',
+    buttons: ['Install Driver', 'Skip'],
+    defaultId: 0,
+    message: 'AIMEA requires a virtual audio driver to capture system audio.',
+    detail: `Click Install Driver to run the installer: ${pkgName}`
+  }).then(({ response }) => {
+    if (response === 0) {
+      // Launch installer
+      if (fs.existsSync(pkgPath)) {
+        const installerCmd = process.platform === 'darwin' ? 'open' : pkgPath;
+        const installerArgs = process.platform === 'darwin' ? [pkgPath] : [];
+        spawn(installerCmd, installerArgs, { detached: true });
+      } else {
+        dialog.showErrorBox('Installer not found', `Could not locate ${pkgName} in resources.`);
+      }
+    }
+  });
 });
 
 

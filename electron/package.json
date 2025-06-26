@@ -21,6 +21,11 @@
         "from": "../dist/server/",
         "to": "server",
         "filter": ["**/*"]
+      },
+      {
+        "from": "resources/",
+        "to": "resources",
+        "filter": ["**/*"]
       }
     ],
     "mac": {
