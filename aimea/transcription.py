@@ -8,7 +8,7 @@ import pyaudio
 from deepgram import DeepgramClient, LiveTranscriptionEvents
 
 from aimea.buffer import RollingBuffer
-from aimea.config import DEEPGRAM_API_KEY, AIMEA_INPUT_DEVICE_NAME
+from aimea.config import DEEPGRAM_API_KEY, AIMEA_INPUT_DEVICE_NAME, DEEPGRAM_MODEL, DEEPGRAM_TIER
 
 
 class Transcriber:
@@ -107,6 +107,7 @@ class Transcriber:
         socket.on(LiveTranscriptionEvents.Error, _on_error)
 
         # Start the WebSocket connection with proper audio parameters
+        # Start the WebSocket connection with proper audio parameters
         options = {
             "encoding": "linear16",
             "sample_rate": self.sample_rate,
@@ -116,7 +117,14 @@ class Transcriber:
             "language": "en-US",
             # Enable Deepgram speaker diarization
             "diarize": True,
+            # Improve accuracy with smart formatting
+            "smart_format": True,
         }
+        # Optionally use a specific model and tier for higher accuracy
+        if DEEPGRAM_MODEL:
+            options["model"] = DEEPGRAM_MODEL
+        if DEEPGRAM_TIER:
+            options["tier"] = DEEPGRAM_TIER
         started = await socket.start(options)
         if not started:
             print("Failed to start Deepgram transcription stream.")

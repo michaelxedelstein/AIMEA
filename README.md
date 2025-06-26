@@ -8,6 +8,9 @@ AIMEA is an AI-powered meeting assistant that transcribes meetings in real time,
 
 ```env
 DEEPGRAM_API_KEY=<your_deepgram_key>
+# (Optional) use an enhanced Deepgram model and tier for higher accuracy
+DEEPGRAM_MODEL=general
+DEEPGRAM_TIER=enhanced
 AZURE_OPENAI_API_KEY=<your_azure_openai_key>
 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4
