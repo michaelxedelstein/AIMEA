@@ -1,0 +1,26 @@
+{
+  "name": "aimea-ui",
+  "version": "0.1.0",
+  "description": "AIMEA live transcript and summary UI",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^23.0.0"
+  },
+  "build": {
+    "appId": "com.aimea.desktop",
+    "productName": "AIMEA",
+    "files": [
+      "**/*",
+      "../server.py",
+      "../aimea/**"
+    ],
+    "mac": {
+      "target": ["dmg"]
+    }
+  }
+}

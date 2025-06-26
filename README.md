@@ -48,3 +48,27 @@ curl -X POST \
 ```
 
 If you receive a 404, double check that your `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME`, and `AZURE_OPENAI_API_VERSION` exactly match your Azure resource settings.
+
+## Desktop UI (Electron)
+
+We provide a cross-platform desktop app built with Electron to monitor live transcripts and get on-demand summaries.
+
+Prerequisites:
+ - Node.js (v16+)
+ - Your Python server running (`python server.py`)
+
+To launch the UI:
+```bash
+# In one terminal, start the Python server:
+python server.py
+
+# In another terminal, package and launch the Electron app:
+cd electron
+npm install
+npm run build   # produces AIMEA.dmg on macOS (in dist/)
+npm start       # or open the built DMG and launch the app
+```
+
+The window will show:
+ - **Live Transcript** area (auto-updating every second)
+ - **Get Summary** button and **Summary** display

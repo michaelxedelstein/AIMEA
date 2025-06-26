@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+
+# Node modules
+node_modules/
+electron/node_modules/
+
+# Logs
+*.log
+
+# Distribution
+dist/
