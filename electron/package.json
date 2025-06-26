@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build-server": "python3 -m PyInstaller --onefile --distpath dist/server ../server.py",
+    "build": "npm run build-server && electron-builder"
   },
   "devDependencies": {
     "electron": "^25.0.0",
@@ -14,13 +15,18 @@
   "build": {
     "appId": "com.aimea.desktop",
     "productName": "AIMEA",
-    "files": [
-      "**/*",
-      "../server.py",
-      "../aimea/**"
+    "files": ["**/*", "../aimea/**"],
+    "extraResources": [
+      {
+        "from": "../dist/server/",
+        "to": "server",
+        "filter": ["**/*"]
+      }
     ],
     "mac": {
-      "target": ["dmg"]
-    }
+      "target": ["dmg"],
+      "identity": "${CSC_NAME}"
+    },
+    "win": { "target": ["nsis"] }
   }
 }

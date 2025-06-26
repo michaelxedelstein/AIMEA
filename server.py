@@ -9,6 +9,7 @@ from aiohttp import web
 from aimea.buffer import RollingBuffer
 from aimea.transcription import Transcriber
 from aimea.summarizer import Summarizer
+import pyaudio
 
 # Shared buffer and services
 buffer = RollingBuffer(window_seconds=120.0)
@@ -47,11 +48,38 @@ async def handle_summary(request: web.Request) -> web.Response:
         print(f"Exception in /summary: {e}")
         import traceback; traceback.print_exc()
         return web.json_response({'error': str(e)}, status=500)
+    
+async def handle_devices(request: web.Request) -> web.Response:
+    """List available input devices."""
+    audio = pyaudio.PyAudio()
+    devices = []
+    for i in range(audio.get_device_count()):
+        info = audio.get_device_info_by_index(i)
+        if info.get('maxInputChannels', 0) > 0:
+            devices.append({'name': info.get('name'), 'index': i})
+    audio.terminate()
+    return web.json_response({'devices': devices})
+
+async def handle_select_device(request: web.Request) -> web.Response:
+    """Select a new input device and restart transcription."""
+    data = await request.json()
+    device = data.get('device')
+    transcriber.set_input_device(device)
+    # Restart transcription task
+    task = request.app.get('transcription_task')
+    if task:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+    request.app['transcription_task'] = asyncio.create_task(transcriber.stream_audio())
+    return web.json_response({'status': 'ok', 'device': device})
 
 def create_app() -> web.Application:
     app = web.Application()
     app.router.add_get('/buffer', handle_buffer)
     app.router.add_get('/summary', handle_summary)
+    app.router.add_get('/devices', handle_devices)
+    app.router.add_post('/device', handle_select_device)
     app.on_startup.append(start_transcription)
     app.on_cleanup.append(stop_transcription)
     return app

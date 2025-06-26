@@ -14,7 +14,7 @@ AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4
 AZURE_OPENAI_API_VERSION=2024-02-15-preview
 ```
 
-2. Install dependencies (into your Python environment):
+2. Install dependencies (into your Python virtual environment):
 
    On macOS you may first need to install PortAudio so that PyAudio can compile:
 
@@ -22,11 +22,21 @@ AZURE_OPENAI_API_VERSION=2024-02-15-preview
    brew install portaudio
    ```
 
-```bash
-pip install -r requirements.txt
-```
+   Create and activate a Python venv, then install:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate      # on Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-3. Run the application:
+3. System Audio Capture (Phase 1):
+   - Install a virtual audio device to merge mic + system audio.
+     * macOS: `brew install blackhole-2ch`
+     * Windows: install Virtual Audio Cable or similar.
+   - Launch the app and in the **Input Device** dropdown, select the merged virtual device (e.g. “BlackHole 2ch” or your combined device), then click **Apply**.
+     The app will switch to that device for capturing both microphone and system audio during the session.
+
+4. Run the application:
 
 ```bash
 python main.py
@@ -49,6 +59,34 @@ curl -X POST \
 
 If you receive a 404, double check that your `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME`, and `AZURE_OPENAI_API_VERSION` exactly match your Azure resource settings.
 
+## Developer Build (Phase 1)
+
+To produce the self-contained desktop app (includes server + UI):
+
+1. Create a Python virtual environment and install dependencies:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate      # Windows: .venv\\Scripts\\activate
+   pip install -r requirements.txt
+   ```
+
+2. Install PyInstaller if not already present:
+   ```bash
+   pip install pyinstaller
+   ```
+
+3. Build the Python backend into a single executable:
+   ```bash
+   python3 -m PyInstaller --onefile --distpath electron/dist/server server.py
+   ```
+
+4. Build the Electron app:
+   ```bash
+   cd electron
+   npm install
+   npm run build   # packages into dist/ (DMG on macOS, NSIS on Windows)
+   ```
+
 ## Desktop UI (Electron)
 
 We provide a cross-platform desktop app built with Electron to monitor live transcripts and get on-demand summaries.
@@ -57,17 +95,15 @@ Prerequisites:
  - Node.js (v16+)
  - Your Python server running (`python server.py`)
 
-To launch the UI:
-```bash
-# In one terminal, start the Python server:
-python server.py
+### Launching the Desktop App
+After building, install and run the packaged AIMEA app without opening terminals:
+- macOS: open the `.dmg` in `electron/dist`, drag **AIMEA** to `/Applications`, then double-click it.
+- Windows: run the `AIMEA Setup.exe` installer in `electron\dist`, and launch **AIMEA** from the Start menu.
 
-# In another terminal, package and launch the Electron app:
-cd electron
-npm install
-npm run build   # produces AIMEA.dmg on macOS (in dist/)
-npm start       # or open the built DMG and launch the app
-```
+On first run:
+- The OS will prompt for microphone permission—click **Allow**.
+- In the **Input Device** dropdown, select your merged virtual device and click **Apply**.
+- AIMEA will start live transcription and allow on-demand summaries.
 
 The window will show:
  - **Live Transcript** area (auto-updating every second)
