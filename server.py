@@ -9,8 +9,15 @@ from aiohttp import web
 from aimea.buffer import RollingBuffer
 from aimea.transcription import Transcriber
 from aimea.summarizer import Summarizer
-from aimea.config import AZURE_OPENAI_DEPLOYMENT_NAME
+from aimea.config import (
+    AZURE_OPENAI_DEPLOYMENT_NAME,
+    DEEPGRAM_API_KEY,
+    DEEPGRAM_MODEL,
+    DEEPGRAM_TIER,
+    DEEPGRAM_LANGUAGES,
+)
 print(f"[Config] Azure deployment name: '{AZURE_OPENAI_DEPLOYMENT_NAME}'")
+print(f"[Config] Deepgram API key set? {'yes' if DEEPGRAM_API_KEY else 'no'}, model={DEEPGRAM_MODEL}, tier={DEEPGRAM_TIER}, languages={DEEPGRAM_LANGUAGES}")
 import pyaudio
 
 # Shared buffer and services
@@ -78,6 +85,29 @@ async def handle_select_device(request: web.Request) -> web.Response:
     request.app['transcription_task'] = asyncio.create_task(transcriber.stream_audio())
     return web.json_response({'status': 'ok', 'device': device})
     
+async def handle_languages(request: web.Request) -> web.Response:
+    """List supported transcription languages."""
+    langs = []
+    for tag in DEEPGRAM_LANGUAGES.split(','):
+        code = tag.split('-')[0]  # Deepgram streaming expects simple codes like 'en' or 'es'
+        label = 'English' if code == 'en' else 'Español' if code == 'es' else tag
+        langs.append({'value': code, 'label': label})
+    return web.json_response({'languages': langs})
+
+async def handle_select_language(request: web.Request) -> web.Response:
+    """Select transcription language and restart transcription."""
+    data = await request.json()
+    lang = data.get('language')
+    transcriber.set_language(lang)
+    # Restart transcription task
+    task = request.app.get('transcription_task')
+    if task:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+    request.app['transcription_task'] = asyncio.create_task(transcriber.stream_audio())
+    return web.json_response({'status': 'ok', 'language': lang})
+    
 async def handle_classify(request: web.Request) -> web.Response:
     """Classify a transcript line into intent and topics using Azure OpenAI."""
     data = await request.json()
@@ -114,6 +144,8 @@ def create_app() -> web.Application:
     app.router.add_get('/summary', handle_summary)
     app.router.add_get('/devices', handle_devices)
     app.router.add_post('/device', handle_select_device)
+    app.router.add_get('/languages', handle_languages)
+    app.router.add_post('/language', handle_select_language)
     # Start transcription only after user selects an input device via /device endpoint
     # app.on_startup.append(start_transcription)
     app.on_cleanup.append(stop_transcription)

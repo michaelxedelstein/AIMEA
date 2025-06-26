@@ -28,10 +28,16 @@ class Transcriber:
         self.channels = channels
         self.block_size = block_size
         self.input_device_name = input_device_name
+        self.language = None
         self.dg_client = DeepgramClient(DEEPGRAM_API_KEY)
     def set_input_device(self, device_name: str) -> None:
         """Update the input device name to capture from."""
         self.input_device_name = device_name
+        self.language = self.language  # retain language
+
+    def set_language(self, language: str) -> None:
+        """Update the transcription language (e.g. 'en-US', 'es-ES')."""
+        self.language = language
 
     async def stream_audio(self) -> None:
         """Start streaming audio to Deepgram and collecting interim transcripts."""
@@ -136,11 +142,11 @@ class Transcriber:
             # Enable Deepgram speaker diarization
             "diarize": True,
         }
-        # Optionally use a specific model and tier for higher accuracy
-        if DEEPGRAM_MODEL:
-            options["model"] = DEEPGRAM_MODEL
-        if DEEPGRAM_TIER:
-            options["tier"] = DEEPGRAM_TIER
+        # If a language is selected, explicitly set it
+        if self.language:
+            options["language"] = self.language
+        # Debug: print options used for WebSocket start
+        print(f"[Deepgram] Starting WS with options: {options}")
         started = await socket.start(options)
         if not started:
             print("Failed to start Deepgram transcription stream.")

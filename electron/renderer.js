@@ -1,5 +1,7 @@
 const deviceSelect = document.getElementById('deviceSelect');
 const applyBtn = document.getElementById('applyDevice');
+const languageSelect = document.getElementById('languageSelect');
+const applyLangBtn = document.getElementById('applyLanguage');
 const transcriptDiv = document.getElementById('transcript');
 const summaryDiv = document.getElementById('summaryText');
 const summaryBtn = document.getElementById('summaryBtn');
@@ -66,12 +68,45 @@ async function classifyLine(line) {
 
 // Populate device list; poll until server is ready
 fetchDevices();
+// Populate devices until available
 const devicePoll = setInterval(async () => {
   await fetchDevices();
   if (deviceSelect.options.length > 0) {
     clearInterval(devicePoll);
   }
 }, 1000);
+// Fetch languages
+async function fetchLanguages() {
+  try {
+    const res = await fetch('http://localhost:8000/languages');
+    const data = await res.json();
+    languageSelect.innerHTML = '';
+    data.languages.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.value;
+      opt.textContent = l.label;
+      languageSelect.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Error fetching languages:', err);
+  }
+}
+// Populate language selector
+fetchLanguages();
+// Handle language apply
+applyLangBtn.addEventListener('click', async () => {
+  try {
+    const res = await fetch('http://localhost:8000/language', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({language: languageSelect.value}),
+    });
+    const data = await res.json();
+    console.log('Language set:', data.language);
+  } catch (err) {
+    console.error('Error selecting language:', err);
+  }
+});
 applyBtn.addEventListener('click', applyDevice);
 
 // Live buffer polling
