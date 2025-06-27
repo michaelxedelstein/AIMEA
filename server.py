@@ -25,6 +25,8 @@ buffer = RollingBuffer(window_seconds=120.0)
 transcriber = Transcriber(buffer)
 # Disable periodic summarization by setting a large interval
 summarizer = Summarizer(buffer, interval=3600.0)
+# Attach summarizer to transcriber for live text analysis
+transcriber.summarizer = summarizer
 transcription_task = None
 
 async def start_transcription(app: web.Application) -> None:

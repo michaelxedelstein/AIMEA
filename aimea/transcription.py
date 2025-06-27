@@ -38,6 +38,43 @@ class Transcriber:
     def set_language(self, language: str) -> None:
         """Update the transcription language (e.g. 'en-US', 'es-ES')."""
         self.language = language
+    
+    async def _analyze_buffer(self) -> None:
+        """Run summarization on the full buffer via Azure OpenAI."""
+        try:
+            contents = self.buffer.get_contents()
+            if not contents:
+                return
+            summary = await self.summarizer.summarize(contents)
+            print(f"[Buffer Summary] {summary}")
+        except Exception as e:
+            print(f"[Analyzer] summarize error: {e}")
+
+    async def _classify_line(self, text: str) -> None:
+        """Classify a single transcript line into language, intent, and topics via Azure OpenAI."""
+        from aimea.config import AZURE_OPENAI_DEPLOYMENT_NAME
+        import json
+        prompt = (
+            "You are an AI assistant that extracts the language (en or es), intent, and topics from a meeting transcript text. "
+            "Return a JSON object with the following keys:\n"
+            "- language: one of \"en\" or \"es\"\n"
+            "- intent: one of \"schedule_meeting\", \"send_message\", \"action_item\", or \"other\"\n"
+            "- topics: an array of short topic strings (e.g., \"budget\", \"roadmap\").\n"
+            f"Text: {text}"
+        )
+        try:
+            response = await self.summarizer.client.chat.completions.create(
+                model=AZURE_OPENAI_DEPLOYMENT_NAME,
+                messages=[{'role': 'user', 'content': prompt}],
+            )
+            content = response.choices[0].message.content.strip()
+            try:
+                result = json.loads(content)
+            except Exception:
+                result = {'error': 'Failed to parse classification', 'raw': content}
+            print(f"[Classification] {result}")
+        except Exception as e:
+            print(f"[Analyzer] classification error: {e}")
 
     async def stream_audio(self) -> None:
         """Start streaming audio to Deepgram and collecting interim transcripts."""
@@ -87,65 +124,52 @@ class Transcriber:
                 stream = audio_interface.open(**open_args)
             else:
                 raise
-        # Initialize Deepgram WebSocket client
+        # Initialize Deepgram WebSocket client for transcription only
         socket = self.dg_client.listen.asyncwebsocket.v("1")
         stop_event = asyncio.Event()
-        # Log connection events for debugging
+        # Connection handlers
         async def _on_open(_, open, **kwargs):
             print("Deepgram WebSocket connection opened.")
         async def _on_metadata(_, metadata, **kwargs):
             print(f"Deepgram metadata received: {metadata}")
         socket.on(LiveTranscriptionEvents.Open, _on_open)
         socket.on(LiveTranscriptionEvents.Metadata, _on_metadata)
-
+        # Transcript handler
         async def _on_transcript(_, result, **kwargs):
-            # Only buffer and print finalized transcripts to avoid repetition
             if not getattr(result, "is_final", False):
                 return
             alt = result.channel.alternatives[0]
             transcript = alt.transcript.strip()
-            # Determine speaker index if diarization is enabled
             speaker = None
-            if hasattr(alt, 'words') and alt.words:
-                speaker = getattr(alt.words[0], 'speaker', None)
-            # Tag transcript with speaker
-            if speaker is not None:
-                entry = f"Speaker {speaker}: {transcript}"
-            else:
-                entry = transcript
+            if hasattr(alt, "words") and alt.words:
+                speaker = getattr(alt.words[0], "speaker", None)
+            entry = f"Speaker {speaker}: {transcript}" if speaker is not None else transcript
             self.buffer.add(entry)
             print(entry)
-
+            # Trigger text-based analysis
+            if hasattr(self, "summarizer"):
+                asyncio.create_task(self._classify_line(transcript))
+                asyncio.create_task(self._analyze_buffer())
+        socket.on(LiveTranscriptionEvents.Transcript, _on_transcript)
+        # Close and error handlers
         async def _on_close(_, close, **kwargs):
             stop_event.set()
-
         async def _on_error(_, error, **kwargs):
             print(f"Deepgram error: {error}")
             stop_event.set()
-
-        socket.on(LiveTranscriptionEvents.Transcript, _on_transcript)
         socket.on(LiveTranscriptionEvents.Close, _on_close)
         socket.on(LiveTranscriptionEvents.Error, _on_error)
-
-        # Start the WebSocket connection with proper audio parameters
-        # Start the WebSocket connection with proper audio parameters
-        # Configure Deepgram streaming options
-        # Streaming options: minimal required keys for websocket
+        # Start transcription stream
         options = {
             "encoding": "linear16",
             "sample_rate": self.sample_rate,
             "channels": self.channels,
             "punctuate": True,
             "interim_results": True,
-            # (Optional) language; omit to let Deepgram auto-detect language
-            # "language": DEEPGRAM_LANGUAGES,
-            # Enable Deepgram speaker diarization
             "diarize": True,
         }
-        # If a language is selected, explicitly set it
         if self.language:
             options["language"] = self.language
-        # Debug: print options used for WebSocket start
         print(f"[Deepgram] Starting WS with options: {options}")
         started = await socket.start(options)
         if not started:
@@ -154,19 +178,16 @@ class Transcriber:
             stream.close()
             audio_interface.terminate()
             return
-
-        # Send audio until the connection closes or an error occurs
+        # Send audio until the stream closes
         try:
             while not stop_event.is_set():
-                try:
-                    data = stream.read(self.block_size, exception_on_overflow=False)
-                    sent = await socket.send(data)
-                    if not sent:
-                        break
-                except Exception as e:
-                    print(f"Error sending audio: {e}")
+                data = stream.read(self.block_size, exception_on_overflow=False)
+                sent = await socket.send(data)
+                if not sent:
                     break
                 await asyncio.sleep(0)
+        except Exception as e:
+            print(f"Error sending audio: {e}")
         finally:
             try:
                 await socket.finish()
