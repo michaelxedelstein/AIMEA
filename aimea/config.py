@@ -30,3 +30,5 @@ DEEPGRAM_TIER = os.getenv("DEEPGRAM_TIER")        # e.g., "enhanced"
 DEEPGRAM_LANGUAGES = os.getenv("DEEPGRAM_LANGUAGES", "en-US,es-ES")
 # Audio input device name for system audio capture (e.g., "BlackHole 2ch"); leave blank to use default mic
 AIMEA_INPUT_DEVICE_NAME = os.getenv("AIMEA_INPUT_DEVICE_NAME") or None
+# Google Calendar configuration
+GOOGLE_CALENDAR_ID = os.getenv("GOOGLE_CALENDAR_ID", "primary")

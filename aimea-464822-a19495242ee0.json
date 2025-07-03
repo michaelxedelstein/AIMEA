@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "aimea-464822",
+  "private_key_id": "a19495242ee03d0de41b55ffdf716684cd64e7ff",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRwPqk80rpm4Nh\nPdNUV5VR5ytSTbyRJXrI4SYtbfCSmobsjRNRz/Dg5bvOxUxxWMKVr7LNyCSizPPQ\nKOJYAvJFo7UuCDZFS6tLyn3akt5MQzt8BPaLJ8SyO0CTBtqcTuB1Rka7hEWZ+7Qq\n5FNkP9kyQQ/RxXWnMRSdL3d5GCmIc4GsoMWv3yhTH51ZBP2kcrQX8bl+BhlIJa63\nzh6srRMlf1aaf4kY9QCEJpRhuiyebud/xS6AAP6Tjxc1U5zAs+BANO4N2U9jNEdF\noAbNaw1/Kow6919h/TYXqb58HrPXCsLPVl86ObUVJjUUWPDIgRDyIY7ux9IWGjRE\nCg7T177PAgMBAAECggEAOEOPGCsIt7QW4EEwzEl4DNG5Dak7gSWwE21Ni9cXNoQL\n2C0ZdxMTtof5QkQrNqZL/9Hy4P8kUKUwa3BkEp6rtSFuKqxaPmlHSBvHeZd22Lca\nIDDGn1oqCXMaZbXrcw03aU3SEF+xOdZKJE09z0DPNos8PpU8c34XXPiMECf6kBaK\n2cWzeMdnJsQYaAaeESRt1ym/j2ZjHnWP1BdON2uMibmfI1KFy8MjYiCWZrm088P9\nSDAODATtCs8cH4i8NRfysxfw1W0fgQRIKQkoisH6SDiKjy5DM5ac44PhzQvmhC5D\nfr8OWeKx2KDain/77YUhq7OlzGwSMwJ/Zy5+T7y+QQKBgQD+/BXC28Ug2TXZsmik\n67dTTqTA4E4SGlHCCmWbxoCV4dh4W+ry3IF59ONxnJoaKDJvzSIT+7WzoGFBRx3E\nl0Ap/v4sZ3Sy3re/p0HLInORhoUiIIVctWWnoU5hQRsC8OZKkK0faLwtLKfxNKTE\nY5K/TePQPnMt956rcsH/ui5hDwKBgQDSlsnjVI7+3C8bpHg+t3Ux24vMJciXryHW\nJ4T582v10LN5UgiRR+BeywbebI4aZ/OJzbfjVNfGh8sniUQGUA4A9ZbXH8sQ+Jw6\nxKQJcXs3HgXuGeFImQmSwaIj5F13pyfrHsiDbNlMw/e/53GAHRCF88MMmp62B5hI\nLB22KglGQQKBgHfsSbPOtwT/A6OylCLUtfEZcMVB+ZXsCP3Q8/7yujFD+hKJcJPu\nf3rDYWFivNuGgkow2VE6tjeYO4V/FBIM7OGTiymJMsqZkyQxXvFR77bG5MCrOO3k\nZr4TUJDPFQwqDrWNG89E7BP3B7ma/89Z4X/V+0pKxNMeveJ246UJhJyjAoGBAKXA\nN5FtmctxhMaOEnLStTST6Bm714HEP66ullShyuTE6q5f6gxndWtHA9YHvWV9Ukux\nlr4gpmFFupoYyWjqk8sfgiU6ifuGonkDE1W3c1Lzl5lL12zrv4Q6UiNL+GFYOOwv\n44TGJNbuG895HHXI6pt0PJ5sCOWfXrXXu18JARnBAoGBAMPl6TphU7P99/t0jYL6\n+tQY6WlneUMkeqy9H5XnbIoFusgnvjTF3G4CQAFHnMrpO2ptTEpIIAPPWHf365Sg\n9cOORkGoMezH3eLr+me2jzEFI+TA0e/7NynI7jRWmAhMS++mk2HodG6kbFkF4JOU\niTcgtGlI2saLdhzOlvGHj3e7\n-----END PRIVATE KEY-----\n",
+  "client_email": "aimea-calendar-bot@aimea-464822.iam.gserviceaccount.com",
+  "client_id": "100918668161477214678",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/aimea-calendar-bot%40aimea-464822.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

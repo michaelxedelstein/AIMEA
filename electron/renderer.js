@@ -66,6 +66,8 @@ async function classifyLine(line) {
   }
 }
 
+// Track which lines have triggered a scheduling popup
+const scheduledLines = new Set();
 // Populate device list; poll until server is ready
 fetchDevices();
 // Populate devices until available
@@ -122,6 +124,38 @@ async function fetchBuffer() {
       const div = document.createElement('div');
       div.textContent = line;
       transcriptDiv.appendChild(div);
+    // If scheduling intent detected, prompt user to schedule
+    if (data.intent === 'schedule_meeting' && !scheduledLines.has(line)) {
+      scheduledLines.add(line);
+      const ok = window.confirm(`Detected a meeting scheduling intent:\n"${line}"\n\nSchedule this meeting?`);
+      if (ok) {
+        try {
+          // Prompt for event details
+          const summary = window.prompt('Event title:', line) || line;
+          const startDefault = new Date().toISOString();
+          const start = window.prompt('Start datetime (ISO):', startDefault) || startDefault;
+          const endDefault = new Date(new Date(start).getTime() + 30*60000).toISOString();
+          const end = window.prompt('End datetime (ISO):', endDefault) || endDefault;
+          const attendeesInput = window.prompt('Attendees (comma-separated emails):', '');
+          const attendees = attendeesInput ? attendeesInput.split(',').map(s => s.trim()) : [];
+          // Call schedule endpoint
+          const res = await fetch('http://localhost:8000/schedule', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({summary, description: line, start, end, attendees}),
+          });
+          const result = await res.json();
+          if (res.ok) {
+            window.alert(`Meeting scheduled: ID=${result.event.id}`);
+          } else {
+            window.alert(`Error scheduling meeting: ${result.error}`);
+          }
+        } catch (err) {
+          console.error('Error scheduling meeting:', err);
+          window.alert(`Error scheduling meeting: ${err}`);
+        }
+      }
+    }
       // Classify new lines
       if (!seen.has(line)) {
         seen.add(line);

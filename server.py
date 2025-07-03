@@ -17,11 +17,13 @@ from aimea.config import (
     DEEPGRAM_LANGUAGES,
     OPENAI_API_KEY,
     OPENAI_MODEL,
+    GOOGLE_CALENDAR_ID,
 )
 print(f"[Config] Azure deployment name: '{AZURE_OPENAI_DEPLOYMENT_NAME}'")
 print(f"[Config] OpenAI API key set? {'yes' if OPENAI_API_KEY else 'no'}, model={OPENAI_MODEL}")
 print(f"[Config] Deepgram API key set? {'yes' if DEEPGRAM_API_KEY else 'no'}, model={DEEPGRAM_MODEL}, tier={DEEPGRAM_TIER}, languages={DEEPGRAM_LANGUAGES}")
 import pyaudio
+from aimea.google_calendar import schedule_meeting
 
 # Shared buffer and services
 buffer = RollingBuffer(window_seconds=120.0)
@@ -117,7 +119,11 @@ async def handle_select_language(request: web.Request) -> web.Response:
     
 async def handle_classify(request: web.Request) -> web.Response:
     """Classify a transcript line into intent and topics using Azure OpenAI."""
-    data = await request.json()
+    # Parse JSON body, return 400 on invalid JSON
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({'error': 'Invalid JSON body'}, status=400)
     text = data.get('text', '')
     if not text:
         return web.json_response({'error': 'No text provided'}, status=400)
@@ -149,6 +155,30 @@ async def handle_classify(request: web.Request) -> web.Response:
     except Exception as e:
         return web.json_response({'error': str(e)}, status=500)
 
+async def handle_schedule(request: web.Request) -> web.Response:
+    """Create a Google Calendar event based on provided details."""
+    # Parse JSON body, return 400 on invalid JSON
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({'error': 'Invalid JSON body'}, status=400)
+    # Accept either 'summary' or 'title' as event title
+    summary = data.get('summary') or data.get('title')
+    # Accept either 'start' or 'start_time' for start datetime
+    start = data.get('start') or data.get('start_time')
+    # Accept either 'end' or 'end_time' for end datetime
+    end = data.get('end') or data.get('end_time')
+    # Optional description field
+    description = data.get('description')
+    attendees = data.get('attendees', [])
+    if not summary or not start or not end:
+        return web.json_response({'error': 'Missing summary, start, or end'}, status=400)
+    try:
+        event = schedule_meeting(summary, start, end, attendees, description)
+        return web.json_response({'event': event})
+    except Exception as e:
+        return web.json_response({'error': str(e)}, status=500)
+
 def create_app() -> web.Application:
     app = web.Application()
     app.router.add_get('/buffer', handle_buffer)
@@ -161,6 +191,7 @@ def create_app() -> web.Application:
     # app.on_startup.append(start_transcription)
     app.on_cleanup.append(stop_transcription)
     app.router.add_post('/classify', handle_classify)
+    app.router.add_post('/schedule', handle_schedule)
     return app
 
 if __name__ == '__main__':

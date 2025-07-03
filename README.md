@@ -23,6 +23,12 @@ AZURE_OPENAI_API_VERSION=<azure-api-version>
 # (Optional) Regular OpenAI configuration (overrides Azure when set)
 OPENAI_API_KEY=<your_openai_api_key>
 OPENAI_MODEL=gpt-3.5-turbo
+
+# Google Calendar integration
+# Path to your service account JSON key file
+GOOGLE_APPLICATION_CREDENTIALS=path/to/your-service-account.json
+# Calendar ID (default: primary)
+GOOGLE_CALENDAR_ID=primary
 ```
 
 
@@ -183,3 +189,9 @@ The window will show:
           -d '{"text":"Schedule a meeting for next Tuesday."}'
      ```
 9. When development is complete, follow the **Developer Build** and **Desktop UI** sections above to package and install the full app.
+
+---
+
+## Advanced Action Handling
+
+For a detailed design and workflow of AIMEA’s automatic action item detection and execution (e.g., scheduling meetings, sending iMessages), see [ACTION_HANDLING_SPEC.md](./ACTION_HANDLING_SPEC.md).
