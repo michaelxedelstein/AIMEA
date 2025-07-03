@@ -15,8 +15,11 @@ from aimea.config import (
     DEEPGRAM_MODEL,
     DEEPGRAM_TIER,
     DEEPGRAM_LANGUAGES,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
 )
 print(f"[Config] Azure deployment name: '{AZURE_OPENAI_DEPLOYMENT_NAME}'")
+print(f"[Config] OpenAI API key set? {'yes' if OPENAI_API_KEY else 'no'}, model={OPENAI_MODEL}")
 print(f"[Config] Deepgram API key set? {'yes' if DEEPGRAM_API_KEY else 'no'}, model={DEEPGRAM_MODEL}, tier={DEEPGRAM_TIER}, languages={DEEPGRAM_LANGUAGES}")
 import pyaudio
 
@@ -119,18 +122,22 @@ async def handle_classify(request: web.Request) -> web.Response:
     if not text:
         return web.json_response({'error': 'No text provided'}, status=400)
     try:
-        # Prompt for language, intent, and topic classification
-        prompt = (
-            "You are an AI assistant that extracts the language (en or es), intent, and topics from a meeting transcript text. "
-            "Return a JSON object with the following keys:\n"
-            "- language: one of \"en\" or \"es\"\n"
-            "- intent: one of \"schedule_meeting\", \"send_message\", \"action_item\", or \"other\"\n"
-            "- topics: an array of short topic strings (e.g., \"budget\", \"roadmap\").\n"
-            f"Text: {text}"
+        # Build system instruction and user message for classification
+        system_prompt = (
+            "You are an AI assistant that extracts the language (en or es), intent, and topics from meeting transcript text. "
+            "Output ONLY a JSON object with the following keys: \n"
+            "language: one of \"en\" or \"es\"\n"
+            "intent: one of \"schedule_meeting\", \"send_message\", \"action_item\", or \"other\"\n"
+            "topics: an array of short topic strings (e.g., \"budget\", \"roadmap\")."
         )
+        messages = [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user',   'content': text},
+        ]
+        # Use configured summarizer client (AsyncAzureOpenAI or AsyncClient)
         response = await summarizer.client.chat.completions.create(
-            model=AZURE_OPENAI_DEPLOYMENT_NAME,
-            messages=[{'role': 'user', 'content': prompt}],
+            model=summarizer.model,
+            messages=messages,
         )
         content = response.choices[0].message.content.strip()
         import json

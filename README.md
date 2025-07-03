@@ -11,11 +11,20 @@ DEEPGRAM_API_KEY=<your_deepgram_key>
 # (Optional) use an enhanced Deepgram model and tier for higher accuracy
 DEEPGRAM_MODEL=general
 DEEPGRAM_TIER=enhanced
+# (Optional) comma-separated languages for Deepgram, e.g. en-US,es-ES
+DEEPGRAM_LANGUAGES=en-US,es-ES
+
+# Azure OpenAI configuration (used if OPENAI_API_KEY is not set)
 AZURE_OPENAI_API_KEY=<your_azure_openai_key>
-AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4
-AZURE_OPENAI_API_VERSION=2024-02-15-preview
+AZURE_OPENAI_ENDPOINT=https://<your-azure-resource>.openai.azure.com/
+AZURE_OPENAI_DEPLOYMENT_NAME=<your-deployment-name>
+AZURE_OPENAI_API_VERSION=<azure-api-version>
+
+# (Optional) Regular OpenAI configuration (overrides Azure when set)
+OPENAI_API_KEY=<your_openai_api_key>
+OPENAI_MODEL=gpt-3.5-turbo
 ```
+
 
 2. Install dependencies (into your Python virtual environment):
 
@@ -130,3 +139,47 @@ On first run:
 The window will show:
  - **Live Transcript** area (auto-updating every second)
  - **Get Summary** button and **Summary** display
+
+## Quick Start Guide (for New Users)
+
+1. Clone this repository and enter its directory:
+   ```bash
+   git clone <your-repo-url>
+   cd aime-n8n
+   ```
+2. Create and activate a Python virtual environment:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate      # Windows: .venv\\Scripts\\activate
+   ```
+3. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Rename `.env.example` to `.env` and populate your keys:
+   - See the `.env` example above for all required variables.
+   - To use regular OpenAI instead of Azure, set `OPENAI_API_KEY`.
+5. (macOS only) Install PortAudio and BlackHole for audio capture:
+   ```bash
+   brew install portaudio
+   brew install blackhole-2ch
+   ```
+6. Start the Python backend server:
+   ```bash
+   python server.py
+   ```
+7. In a new terminal, launch the Electron UI:
+   ```bash
+   cd electron
+   npm install
+   npm start
+   ```
+8. Verify functionality via API endpoints:
+   - Summary: `curl -i http://localhost:8000/summary`
+   - Classification:
+     ```bash
+     curl -i -X POST http://localhost:8000/classify \
+          -H "Content-Type: application/json" \
+          -d '{"text":"Schedule a meeting for next Tuesday."}'
+     ```
+9. When development is complete, follow the **Developer Build** and **Desktop UI** sections above to package and install the full app.

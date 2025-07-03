@@ -52,20 +52,24 @@ class Transcriber:
 
     async def _classify_line(self, text: str) -> None:
         """Classify a single transcript line into language, intent, and topics via Azure OpenAI."""
-        from aimea.config import AZURE_OPENAI_DEPLOYMENT_NAME
         import json
-        prompt = (
-            "You are an AI assistant that extracts the language (en or es), intent, and topics from a meeting transcript text. "
-            "Return a JSON object with the following keys:\n"
-            "- language: one of \"en\" or \"es\"\n"
-            "- intent: one of \"schedule_meeting\", \"send_message\", \"action_item\", or \"other\"\n"
-            "- topics: an array of short topic strings (e.g., \"budget\", \"roadmap\").\n"
-            f"Text: {text}"
+        # Build system instruction and user message for classification
+        system_prompt = (
+            "You are an AI assistant that extracts the language (en or es), intent, and topics from meeting transcript text. "
+            "Output ONLY a JSON object with the following keys: \n"
+            "language: one of \"en\" or \"es\"\n"
+            "intent: one of \"schedule_meeting\", \"send_message\", \"action_item\", or \"other\"\n"
+            "topics: an array of short topic strings (e.g., \"budget\", \"roadmap\")."
         )
+        messages = [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user',   'content': text},
+        ]
         try:
+            # Call classification endpoint with system and user messages
             response = await self.summarizer.client.chat.completions.create(
-                model=AZURE_OPENAI_DEPLOYMENT_NAME,
-                messages=[{'role': 'user', 'content': prompt}],
+                model=self.summarizer.model,
+                messages=messages,
             )
             content = response.choices[0].message.content.strip()
             try:
