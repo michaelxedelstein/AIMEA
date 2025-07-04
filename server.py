@@ -6,6 +6,17 @@ import asyncio
 import contextlib
 from aiohttp import web
 
+# CORS middleware to allow cross-origin requests from the Electron renderer
+@web.middleware
+async def cors_middleware(request, handler):
+    if request.method == 'OPTIONS':
+        return web.Response()
+    resp = await handler(request)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return resp
+
 from aimea.buffer import RollingBuffer
 from aimea.transcription import Transcriber
 from aimea.summarizer import Summarizer
@@ -180,7 +191,7 @@ async def handle_schedule(request: web.Request) -> web.Response:
         return web.json_response({'error': str(e)}, status=500)
 
 def create_app() -> web.Application:
-    app = web.Application()
+    app = web.Application(middlewares=[cors_middleware])
     app.router.add_get('/buffer', handle_buffer)
     app.router.add_get('/summary', handle_summary)
     app.router.add_get('/devices', handle_devices)

@@ -119,7 +119,7 @@ async function fetchBuffer() {
     const res = await fetch('http://localhost:8000/buffer');
     const data = await res.json();
     transcriptDiv.innerHTML = '';
-    data.buffer.forEach(line => {
+    data.buffer.forEach(async line => {
       // Render line
       const div = document.createElement('div');
       div.textContent = line;
