@@ -1,0 +1,51 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 HelveticaNeue-Bold;\f1\fnil\fcharset0 HelveticaNeue;\f2\fnil\fcharset0 Menlo-Regular;
+}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red0\green0\blue0;\red0\green0\blue0;
+\red169\green28\blue20;\red255\green238\blue10;}
+{\*\expandedcolortbl;;\cspthree\c0\c0\c0;\cssrgb\c0\c0\c0;\csgray\c0\c0;
+\cssrgb\c72658\c17987\c9764;\cssrgb\c100000\c93301\c0;}
+\margl1440\margr1440\vieww38200\viewh19980\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\b\fs28 \cf2 Get current summary\
+\
+
+\f1\b0     curl -i http://localhost:8000/summary\
+
+\f0\b \
+Classify into language/intent/topics\
+\
+
+\f1\b0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f2 \cf3 \cb4 \CocoaLigature0 curl -i -X POST http://localhost:8000/classify \\\
+-H \cf5 "Content-Type: application/json"\cf3  \\\
+-d \cf5 '\{"text":"Could you set up a roadmap review meeting for the budget team next Tuesday?"\}'\cf3 \cb6 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\b \cf2 \cb1 \CocoaLigature1 \
+\
+Schedule meeting
+\f1\b0 \
+\
+curl -X POST http://localhost:8000/schedule \\\
+  -H "Content-Type: application/json" \\\
+  -d '\{\
+    "title": "AI Team Sync",\
+    "description": "Review action items and calendar sync",\
+    "start_time": "2025-07-04T15:00:00-04:00",\
+    "end_time": "2025-07-04T15:30:00-04:00",\
+    "attendees": ["michaeledelstein.work@gmail.com"]\
+  \}'\
+\
+
+\f0\b Inject Text into the \'91Listen\'92 query for the UI
+\f1\b0 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f2 \cf3 \cb4 \CocoaLigature0 curl -i -X POST http://localhost:8000/inject \\\
+-H \cf5 "Content-Type: application/json"\cf3  \\\
+-d \cf5 '\{"line":"Let\'92s schedule a meeting next Monday at 3 pm to review the budget."\}'}
