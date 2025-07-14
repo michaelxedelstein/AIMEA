@@ -16,7 +16,7 @@ function parseDateTime(text) {
   const now = new Date();
   let hour = null, minute = 0;
   // Time extraction: e.g. "at 3 pm" or "at three pm"
-  const timeMatch = text.match(/at\s+((?:\d{1,2}|[a-z]+)(?::\d{2})?)\s*(am|pm)/i);
+  const timeMatch = text.match(/(?:at\s+)?((?:\d{1,2}|[a-z]+)(?::\d{2})?)\s*(am|pm)/i);
   if (timeMatch) {
     const tp = timeMatch[1].toLowerCase();
     const ampm = timeMatch[2].toLowerCase();
@@ -53,45 +53,177 @@ function parseDateTime(text) {
 async function schedulePrompt(triggerLine) {
   try {
     console.log('[schedulePrompt] triggered for:', triggerLine);
-    const bufRes = await fetch('http://localhost:8000/buffer');
-    const bufData = await bufRes.json();
-    console.log('[schedulePrompt] buffer fetched', bufData.buffer.length, 'lines');
-    // Extract phrase after "schedule ... meeting" for summary and parsing
+    // Fetch a concise meeting summary for details
+    const sumRes = await fetch('http://localhost:8000/summary');
+    const sumData = await sumRes.json();
+    const summaryText = sumData.summary || '';
+    console.log('[schedulePrompt] summary fetched:', summaryText);
+    // Use simple static meeting title
+    const title = 'Team Meeting';
+    // Extract date/time phrase to compute start
     const phraseMatch = triggerLine.match(/schedule.*meeting(?: for| on)?\s+(.+)/i);
-    let detailsPhrase = phraseMatch && phraseMatch[1] ? phraseMatch[1] : '';
-    // Trim trailing punctuation
-    detailsPhrase = detailsPhrase.replace(/[\.\!\?]$/, '').trim();
-    // Build default summary
-    const defaultSummary = detailsPhrase ? `Meeting: ${detailsPhrase}` : 'Follow-up meeting';
-    // Parse start datetime from phrase, fallback to now
-    const parsedStart = parseDateTime(detailsPhrase) || new Date();
+    const phrase = phraseMatch && phraseMatch[1] ? phraseMatch[1].replace(/[\.\!\?]$/, '').trim() : '';
+    const parsedStart = parseDateTime(phrase) || new Date();
+    // Prepare start/end times
     const start = parsedStart.toISOString();
     const end = new Date(parsedStart.getTime() + 30*60000).toISOString();
-    const confirmMsg = `Schedule meeting with these details?\n` +
-      `Title: ${defaultSummary}\n` +
-      `Start: ${start}\n` +
-      `End: ${end}\n`;
-    const confirmOk = window.confirm(confirmMsg);
-    if (!confirmOk) {
-      console.log('[schedulePrompt] user cancelled scheduling');
-      return;
-    }
-    const summary = defaultSummary;
+    const displayStart = parsedStart.toLocaleString();
+    const displayEnd = new Date(parsedStart.getTime() + 30*60000).toLocaleString();
+    // Build and show confirmation modal
     const attendees = [];
-    console.log('[schedulePrompt] sending schedule request', { summary, description: triggerLine, start, end, attendees });
-    const res2 = await fetch('http://localhost:8000/schedule', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({summary, description: triggerLine, start, end, attendees}),
+    const modal = document.createElement('div');
+    Object.assign(modal.style, {
+      position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
     });
-    const result2 = await res2.json();
-    if (res2.ok) {
-      console.log('[schedulePrompt] meeting scheduled, ID=', result2.event.id);
-    } else {
-      console.error('[schedulePrompt] error scheduling meeting:', result2.error);
-    }
+    const box = document.createElement('div');
+    Object.assign(box.style, {backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', width: '400px', maxWidth: '90%'});
+    box.innerHTML = `
+      <h3>Schedule Meeting</h3>
+      <p><strong>Title:</strong> ${title}</p>
+      <p><strong>Start:</strong> ${displayStart}</p>
+      <p><strong>End:</strong> ${displayEnd}</p>
+      <details style="margin-bottom:1rem;"><summary>More Info</summary><p>${summaryText}</p></details>
+    `;
+    const btnConfirm = document.createElement('button');
+    btnConfirm.textContent = 'Confirm';
+    Object.assign(btnConfirm.style, {marginRight: '0.5rem'});
+    const btnCancel = document.createElement('button');
+    btnCancel.textContent = 'Cancel';
+    box.appendChild(btnConfirm);
+    box.appendChild(btnCancel);
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+    btnCancel.addEventListener('click', () => {
+      console.log('[schedulePrompt] user cancelled scheduling');
+      document.body.removeChild(modal);
+    });
+    btnConfirm.addEventListener('click', async () => {
+      console.log('[schedulePrompt] sending schedule request', {title, description: summaryText, start, end, attendees});
+      try {
+        const res2 = await fetch('http://localhost:8000/schedule', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({summary: title, description: summaryText, start, end, attendees}),
+        });
+        const result2 = await res2.json();
+        if (res2.ok) console.log('[schedulePrompt] meeting scheduled, ID=', result2.event.id);
+        else console.error('[schedulePrompt] error scheduling meeting:', result2.error);
+      } catch (err) {
+        console.error('[schedulePrompt] error:', err);
+      }
+      document.body.removeChild(modal);
+    });
   } catch (err) {
     console.error('Error in schedulePrompt:', err);
+  }
+}
+// Track which lines have triggered a send_message popup
+const messageLines = new Set();
+/**
+ * Prompt user to send an iMessage
+ */
+async function sendMessagePrompt(triggerLine) {
+  try {
+    console.log('[sendMessagePrompt] triggered for:', triggerLine);
+    // Basic parsing: recipient and body
+    // Extract recipient and body from trigger; fallback to user prompt
+    let recipient = '';
+    let body = '';
+    const m = triggerLine.match(/send (?:a )?message to ([^,:]+?)[,:-]?\s*(.*)/i);
+    if (m && m[1]) {
+      recipient = m[1].trim();
+      body = m[2]?.trim() || '';
+    } else {
+      recipient = window.prompt('Enter contact name:');
+      if (!recipient) return;
+    }
+    console.log('[sendMessagePrompt] parsed recipient:', recipient);
+    console.log('[sendMessagePrompt] parsed body:', body);
+    if (!body) {
+      body = window.prompt(`Enter message for ${recipient}:`);
+      if (!body) return;
+    }
+    // Fetch contacts for disambiguation
+    const cRes = await fetch('http://localhost:8000/contacts');
+    const cData = await cRes.json();
+    const recipientLower = recipient.toLowerCase();
+    let matches = (cData.contacts || [])
+      .filter(name => {
+        const lower = name.toLowerCase();
+        return lower.split(/\s+/).some(tok => tok.startsWith(recipientLower));
+      })
+      .sort((a, b) => {
+        const aL = a.toLowerCase(), bL = b.toLowerCase();
+        const aStart = aL.startsWith(recipientLower);
+        const bStart = bL.startsWith(recipientLower);
+        if (aStart && !bStart) return -1;
+        if (bStart && !aStart) return 1;
+        return aL.localeCompare(bL);
+      });
+    let chosen;
+    if (matches.length === 0) {
+      console.log(`[sendMessagePrompt] no contact match for '${recipient}'`);
+      messageLines.delete(triggerLine);
+      window.alert(`No contact found for '${recipient}'`);
+      return;
+    } else if (matches.length === 1) {
+      chosen = matches[0];
+    } else {
+      // Disambiguation modal
+      try {
+        chosen = await new Promise((resolve, reject) => {
+          const modal = document.createElement('div');
+          Object.assign(modal.style, {position:'fixed',top:0,left:0,width:'100%',height:'100%',backgroundColor:'rgba(0,0,0,0.5)',display:'flex',justifyContent:'center',alignItems:'center',zIndex:1000});
+          const box = document.createElement('div');
+          Object.assign(box.style, {backgroundColor:'#fff',padding:'1rem',borderRadius:'8px',width:'300px'});
+          box.innerHTML = `<h3>Select contact for '${recipient}'</h3>`;
+          const sel = document.createElement('select'); sel.id = 'contactSelect'; sel.style.width = '100%';
+          matches.forEach(n => { const opt = document.createElement('option'); opt.textContent = n; sel.appendChild(opt); });
+          box.appendChild(sel);
+          const ok = document.createElement('button'); ok.textContent='OK'; ok.style.margin='0.5rem';
+          const cancel = document.createElement('button'); cancel.textContent='Cancel';
+          box.appendChild(ok); box.appendChild(cancel);
+          modal.appendChild(box); document.body.appendChild(modal);
+          ok.onclick = () => { const selVal = sel.value; document.body.removeChild(modal); resolve(selVal); };
+          cancel.onclick = () => { document.body.removeChild(modal); reject(); };
+        });
+      } catch {
+        console.log('[sendMessagePrompt] contact selection cancelled');
+        // Allow retry on same line
+        messageLines.delete(triggerLine);
+        seen.delete(triggerLine);
+        return;
+      }
+    }
+    // Prepare message modal
+    const msgModal = document.createElement('div');
+    Object.assign(msgModal.style, {position:'fixed',top:0,left:0,width:'100%',height:'100%',backgroundColor:'rgba(0,0,0,0.5)',display:'flex',justifyContent:'center',alignItems:'center',zIndex:1000});
+    const msgBox = document.createElement('div');
+    Object.assign(msgBox.style, {backgroundColor:'#fff',padding:'1rem',borderRadius:'8px',width:'400px',maxWidth:'90%'});
+    msgBox.innerHTML = `<h3>Send iMessage to ${chosen}</h3><textarea id='msgBody' rows='4' style='width:100%'>${body}</textarea>`;
+    const sendBtn = document.createElement('button'); sendBtn.textContent='Send'; sendBtn.style.margin='0.5rem';
+    const cancelBtn = document.createElement('button'); cancelBtn.textContent='Cancel';
+    msgBox.appendChild(sendBtn); msgBox.appendChild(cancelBtn); msgModal.appendChild(msgBox); document.body.appendChild(msgModal);
+    cancelBtn.onclick = () => {
+      console.log('[sendMessagePrompt] message cancelled by user');
+      messageLines.delete(triggerLine);
+      seen.delete(triggerLine);
+      document.body.removeChild(msgModal);
+    };
+    sendBtn.onclick = async () => {
+      const msgBody = msgBox.querySelector('#msgBody').value;
+      console.log('[sendMessagePrompt] sending message', {recipient: chosen, body: msgBody});
+      try {
+        const res = await fetch('http://localhost:8000/message', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipient: chosen, body: msgBody})});
+        const data = await res.json();
+        if (res.ok) console.log('[sendMessagePrompt] message sent'); else console.error('[sendMessagePrompt] error:', data.error);
+      } catch (err) {
+        console.error('[sendMessagePrompt] error:', err);
+      }
+      document.body.removeChild(msgModal);
+    };
+  } catch (e) {
+    console.error('[sendMessagePrompt] error:', e);
   }
 }
 // Fetch available audio input devices
@@ -170,6 +302,13 @@ async function classifyLine(line) {
       scheduledLines.add(line);
       setTimeout(() => schedulePrompt(line), 5000);
     }
+    // Handle send_message intent
+    if (data.intent === 'send_message' && !messageLines.has(line)) {
+      console.log('[classifyLine] send_message intent detected for line:', line);
+      messageLines.add(line);
+      // Delay prompt to gather additional context
+      setTimeout(() => sendMessagePrompt(line), 5000);
+    }
   } catch (err) {
     console.error('Error classifying line:', err);
   }
@@ -233,8 +372,13 @@ async function fetchBuffer() {
     console.log('[fetchBuffer] buffer received', data.buffer.length, 'lines');
     transcriptDiv.innerHTML = '';
     data.buffer.forEach(async line => {
+      // Normalize spoken times: convert 'two pm' to '2 PM'
+      let displayLine = line.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(am|pm)\b/gi, (_, w, ap) => {
+        const num = numberWords[w.toLowerCase()] || w;
+        return `${num} ${ap.toUpperCase()}`;
+      });
       const div = document.createElement('div');
-      div.textContent = line;
+      div.textContent = displayLine;
       transcriptDiv.appendChild(div);
       // Classify new lines
       if (!seen.has(line)) {

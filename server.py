@@ -35,6 +35,7 @@ print(f"[Config] OpenAI API key set? {'yes' if OPENAI_API_KEY else 'no'}, model=
 print(f"[Config] Deepgram API key set? {'yes' if DEEPGRAM_API_KEY else 'no'}, model={DEEPGRAM_MODEL}, tier={DEEPGRAM_TIER}, languages={DEEPGRAM_LANGUAGES}")
 import pyaudio
 from aimea.google_calendar import schedule_meeting
+import subprocess
 
 # Shared buffer and services
 buffer = RollingBuffer(window_seconds=120.0)
@@ -189,6 +190,46 @@ async def handle_schedule(request: web.Request) -> web.Response:
         return web.json_response({'event': event})
     except Exception as e:
         return web.json_response({'error': str(e)}, status=500)
+async def handle_contacts(request: web.Request) -> web.Response:
+    """List macOS Contacts names for message recipient disambiguation."""
+    try:
+        # Use AppleScript to get contact names
+        script = 'tell application "Contacts" to get name of every person'
+        proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(proc.stderr.strip())
+        # AppleScript returns comma-separated list
+        names = [n.strip() for n in proc.stdout.split(',') if n.strip()]
+        return web.json_response({'contacts': names})
+    except Exception as e:
+        return web.json_response({'error': str(e)}, status=500)
+
+async def handle_message(request: web.Request) -> web.Response:
+    """Send an iMessage via macOS Messages app using AppleScript."""
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({'error': 'Invalid JSON body'}, status=400)
+    recipient = data.get('recipient')
+    body = data.get('body')
+    if not recipient or not body:
+        return web.json_response({'error': 'Missing recipient or body'}, status=400)
+    try:
+        # Escape double quotes in message body
+        safe_body = body.replace('"', '\\"')
+        script = (
+            'tell application "Messages"\n'
+            ' set targetService to 1st service whose service type = iMessage\n'
+            f' set targetBuddy to buddy "{recipient}" of targetService\n'
+            f' send "{safe_body}" to targetBuddy\n'
+            'end tell'
+        )
+        proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(proc.stderr.strip())
+        return web.json_response({'status': 'sent'})
+    except Exception as e:
+        return web.json_response({'error': str(e)}, status=500)
 
 def create_app() -> web.Application:
     app = web.Application(middlewares=[cors_middleware])
@@ -203,6 +244,8 @@ def create_app() -> web.Application:
     app.on_cleanup.append(stop_transcription)
     app.router.add_post('/classify', handle_classify)
     app.router.add_post('/schedule', handle_schedule)
+    app.router.add_get('/contacts', handle_contacts)
+    app.router.add_post('/message', handle_message)
     return app
 
 if __name__ == '__main__':
