@@ -1,6 +1,6 @@
 # AIMEA
 
-AIMEA is an AI-powered meeting assistant that transcribes meetings in real time, summarizes discussions every 30–60 seconds, detects intent, and can send messages or tasks via iMessage, Slack, Discord, or Google Calendar.
+ARTIFICIAL INTELLIGENCE MEETING EXECUTIVE ASSISTANT, (AIMEA) is an AI-powered meeting assistant that transcribes meetings in real time, summarizes discussions every 30–60 seconds, detects intent, and can send messages or tasks via iMessage, Slack, Discord, or Google Calendar.
 
 ## Setup
 
