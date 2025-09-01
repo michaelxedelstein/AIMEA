@@ -12,3 +12,11 @@ electron/node_modules/
 # Distribution
 dist/
 codex/
+
+# Env
+.env    
+
+# CodeQL
+codeql-database/
+.codeql/
+
